@@ -1,12 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
-
-
-module.exports = router;
-
-
 const User = require("../models/user.js");
+
+
+
 
 
 
@@ -45,13 +43,13 @@ router.get("/sign-in", async (req, res) => {
 });
 
 router.post("/sign-in", async (req, res) => {
-  // Confirm the user exists
+  // First, get the user from the database
   const userInDatabase = await User.findOne({ username: req.body.username });
   if (!userInDatabase) {
     return res.send("Login failed. Please try again.");
   }
 
-  // Compare provided password with encrypted password
+  // There is a user! Time to test their password with bcrypt
   const validPassword = bcrypt.compareSync(
     req.body.password,
     userInDatabase.password
@@ -60,6 +58,27 @@ router.post("/sign-in", async (req, res) => {
     return res.send("Login failed. Please try again.");
   }
 
-  
-  res.send("Request to sign in received!");
+
+  console.log("SESSION:",req.session);
+
+  // There is a user AND they had the correct password. Time to make a session!
+  // Avoid storing the password, even in hashed format, in the session
+  // If there is other data you want to save to `req.session.user`, do so here!
+  req.session.user = {
+    username: userInDatabase.username,
+    _id: userInDatabase._id
+  };
+
+  res.redirect("/");
 });
+
+
+
+router.get("/sign-out", (req, res) => {
+  req.session.destroy();
+  res.redirect("/");
+});
+
+
+
+module.exports = router;
